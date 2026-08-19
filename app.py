@@ -103,7 +103,7 @@ if st.button("🚀 Procesar Reabasto de Cajas", type="primary", use_container_wi
 
             # Mapeo flexible de columnas
             col_sku = [c for c in df_pedidos.columns if 'SKU' in c or 'ARTICULO' in c]
-            col_cant = [c for c in df_pedidos.columns if 'SOLICITADA' in c or 'PEDIDA' in c or 'CANTIDAD' in c]
+            col_cant = [c for c in df_pedidos.columns if 'SELECCION' in c]
             col_desc = [c for c in df_pedidos.columns if 'DESCRIPCION' in c or 'DESCRIPCIÓN' in c]
 
             if not col_sku or not col_cant:
