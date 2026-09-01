@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import io
 import os
+import re
 from datetime import datetime
 
 # Configuración de página
@@ -20,6 +21,30 @@ def limpiar_sku(sku):
     if val.replace('0', '').isdigit():
         return val.lstrip('0')
     return val
+
+def extraer_secuencia_lote(lote_programacion):
+    """
+    Extrae la secuencia final desde el lote con formato fecha-planilla-secuencia.
+    Si no puede extraerla, devuelve None.
+    """
+    val = str(lote_programacion).strip()
+    if not val or val.lower() == 'nan':
+        return None
+
+    # Caso esperado: 20260901-ABC-15 -> 15
+    partes = val.split('-')
+    ultimo_tramo = partes[-1].strip()
+
+    match_final = re.search(r'(\d+)$', ultimo_tramo)
+    if match_final:
+        return int(match_final.group(1))
+
+    # Respaldo: tomar el último bloque numérico presente en todo el texto.
+    bloques_numericos = re.findall(r'\d+', val)
+    if bloques_numericos:
+        return int(bloques_numericos[-1])
+
+    return None
 
 @st.cache_data
 def cargar_pos_sku_fijo():
@@ -105,6 +130,7 @@ if st.button("🚀 Procesar Reabasto de Cajas", type="primary", use_container_wi
             col_sku = [c for c in df_pedidos.columns if 'SKU' in c or 'ARTICULO' in c]
             col_cant = [c for c in df_pedidos.columns if 'SELECCION' in c]
             col_desc = [c for c in df_pedidos.columns if 'DESCRIPCION' in c or 'DESCRIPCIÓN' in c]
+            col_lote_prog = [c for c in df_pedidos.columns if 'LOTE' in c and ('PROGRAM' in c or 'PROG' in c)]
 
             if not col_sku or not col_cant:
                 st.error("❌ No se encontraron las columnas necesarias ('SKU' y 'CANTIDAD PEDIDA / SOLICITADA') en el archivo de pedidos.")
@@ -113,15 +139,31 @@ if st.button("🚀 Procesar Reabasto de Cajas", type="primary", use_container_wi
             sku_col_name = col_sku[0]
             cant_col_name = col_cant[0]
             desc_col_name = col_desc[0] if col_desc else sku_col_name
+            lote_col_name = col_lote_prog[0] if col_lote_prog else None
 
             df_pedidos['SKU_Clean'] = df_pedidos[sku_col_name].apply(limpiar_sku)
             df_pedidos['CANTIDAD_SOLICITADA'] = pd.to_numeric(df_pedidos[cant_col_name], errors='coerce').fillna(0)
+            df_pedidos['SECUENCIA_LOTE'] = (
+                df_pedidos[lote_col_name].apply(extraer_secuencia_lote)
+                if lote_col_name else None
+            )
 
             # Consolidar por SKU
-            df_resumen = df_pedidos.groupby(
-                [sku_col_name, 'SKU_Clean', desc_col_name], 
-                as_index=False
-            )['CANTIDAD_SOLICITADA'].sum()
+            if lote_col_name:
+                df_resumen = df_pedidos.groupby(
+                    [sku_col_name, 'SKU_Clean', desc_col_name],
+                    as_index=False
+                ).agg({
+                    'CANTIDAD_SOLICITADA': 'sum',
+                    'SECUENCIA_LOTE': 'min'
+                })
+            else:
+                st.warning("⚠️ No se encontró la columna de Lote de Programación. Se mantiene el orden tradicional.")
+                df_resumen = df_pedidos.groupby(
+                    [sku_col_name, 'SKU_Clean', desc_col_name],
+                    as_index=False
+                )['CANTIDAD_SOLICITADA'].sum()
+                df_resumen['SECUENCIA_LOTE'] = None
 
             # Renombrar columnas internas para estandarización
             df_resumen.rename(columns={
@@ -139,12 +181,38 @@ if st.button("🚀 Procesar Reabasto de Cajas", type="primary", use_container_wi
             col_ubi = 'ubicacion' if 'ubicacion' in df_cuad.columns else 'ubicación'
 
             df_cuad['SKU_Clean'] = df_cuad[col_art].apply(limpiar_sku)
+            df_cuad['UBI_NORM'] = (
+                df_cuad[col_ubi]
+                .astype(str)
+                .str.upper()
+                .str.replace(r'[^A-Z0-9]', '', regex=True)
+            )
 
             almac_map = df_cuad[df_cuad[col_area].isin(['ALMAC', 'ALMPIC'])].groupby('SKU_Clean')[col_ubi].first().to_dict()
+            ubicaciones_fallback_norm = {
+                'REBA01',
+                'MIX01',
+                'STREC01',
+                'STREC02',
+                'STREC03',
+                'STREC04',
+                'STREC05'
+            }
+            almac_fallback_map = (
+                df_cuad[df_cuad['UBI_NORM'].isin(ubicaciones_fallback_norm)]
+                .groupby('SKU_Clean')[col_ubi]
+                .first()
+                .to_dict()
+            )
             surt_cuad_map = df_cuad[df_cuad[col_area] == 'SURTID'].groupby('SKU_Clean')[col_ubi].first().to_dict()
 
             # 3. Cruce de Ubicaciones
-            df_resumen['ALMACENAMIENTO'] = df_resumen['SKU_Clean'].map(almac_map).fillna("Sin Pall en almac")
+            df_resumen['ALMACENAMIENTO'] = (
+                df_resumen['SKU_Clean']
+                .map(almac_map)
+                .fillna(df_resumen['SKU_Clean'].map(almac_fallback_map))
+                .fillna("Sin Pall en almac")
+            )
             df_resumen['SURTIDO'] = (
                 df_resumen['SKU_Clean']
                 .map(pos_map)
@@ -152,11 +220,19 @@ if st.button("🚀 Procesar Reabasto de Cajas", type="primary", use_container_wi
                 .fillna("Sin Ubicación Surtido")
             )
 
-            # Ordenar por ubicación de Almacenamiento para optimizar la ruta de la grúa
-            df_resumen = df_resumen.sort_values(by=['ALMACENAMIENTO', 'SURTIDO']).reset_index(drop=True)
+            # Orden principal por secuencia de lote; ubicación queda como desempate.
+            df_resumen['SECUENCIA_LOTE_ORDEN'] = pd.to_numeric(df_resumen['SECUENCIA_LOTE'], errors='coerce')
+            df_resumen['SECUENCIA_LOTE_ORDEN'] = df_resumen['SECUENCIA_LOTE_ORDEN'].fillna(10**9)
+            df_resumen = df_resumen.sort_values(
+                by=['SECUENCIA_LOTE_ORDEN', 'ALMACENAMIENTO', 'SURTIDO']
+            ).reset_index(drop=True)
 
-            df_final = df_resumen[['SKU', 'Descripcion', 'CANTIDAD SOLICITADA', 'ALMACENAMIENTO', 'SURTIDO']].copy()
-            df_final.columns = ['SKU', 'Descripción del Producto', 'Cant. Solicitada', 'Ubicación Origen (ALMACÉN)', 'Ubicación Destino (SURTIDO)']
+            df_resumen['SECUENCIA_CAMION'] = df_resumen['SECUENCIA_LOTE'].apply(
+                lambda x: int(x) if pd.notna(x) else None
+            )
+
+            df_final = df_resumen[['SECUENCIA_CAMION', 'SKU', 'Descripcion', 'CANTIDAD SOLICITADA', 'ALMACENAMIENTO', 'SURTIDO']].copy()
+            df_final.columns = ['Secuencia Camión', 'SKU', 'Descripción del Producto', 'Cant. Solicitada', 'Ubicación Origen (ALMACÉN)', 'Ubicación Destino (SURTIDO)']
 
             st.success(f"🎉 **¡Procesamiento exitoso!** Se consolidaron **{len(df_final)} SKUs**.")
 
@@ -172,6 +248,7 @@ if st.button("🚀 Procesar Reabasto de Cajas", type="primary", use_container_wi
                     <td>{r['Descripción del Producto']}</td>
                     <td style="text-align: center; font-weight: bold; color: #1E3A8A; font-size: 15px;">{r['Ubicación Origen (ALMACÉN)']}</td>
                     <td style="text-align: center; font-weight: bold; color: #065F46; font-size: 15px;">{r['Ubicación Destino (SURTIDO)']}</td>
+                        <td style="text-align: center; font-weight: bold;">{r['Secuencia Camión'] if pd.notna(r['Secuencia Camión']) else '-'}</td>
                     <td style="text-align: center; font-weight: bold; font-size: 16px;">{r['Cant. Solicitada']}</td>
                     <td style="width: 80px;"></td>
                 </tr>
@@ -249,6 +326,7 @@ if st.button("🚀 Procesar Reabasto de Cajas", type="primary", use_container_wi
                             <th>Descripción Producto</th>
                             <th>Origen (Almacén)</th>
                             <th>Destino (Surtido)</th>
+                            <th>Secuencia</th>
                             <th>Cajas</th>
                             <th>Check (✓)</th>
                         </tr>
