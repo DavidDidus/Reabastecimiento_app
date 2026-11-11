@@ -110,11 +110,18 @@ div[data-testid="stFileUploader"] button:hover {
             background: #478D26;
             color: white;
         }
+        /* Eliminar espacio reservado por el encabezado */
+[data-testid="stHeader"] {
+    background: #D9EAD7 !important;
+    height: 0 !important;
+    min-height: 0 !important;
+}
 
-        
-/* Encabezado CCU de borde a borde */
+/* Eliminar separación adicional del contenido */
+[data-testid="stMain"] {
+    padding-top: 0 !important;
+}
 
-/* Encabezado CCU de borde a borde */
 .ccu-header {
     display: flex;
     align-items: center;
