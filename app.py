@@ -1,6 +1,7 @@
 
 from pathlib import Path
 import streamlit as st
+import base64
 
 from core.reabasto import procesar_reabasto
 from reports.html_report import generar_html
@@ -14,12 +15,192 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("📦 Sistema de Reabasto de Cajas")
+def obtener_logo_base64(nombre):
+    ruta = Path(__file__).resolve().parent / "static" / nombre
 
-st.markdown(
-    "Procesa las **Líneas de Pedido Sin Inventario** "
-    "y genera la **Orden de Reabasto Imprimible**."
-)
+    if not ruta.exists():
+        return None
+
+    return base64.b64encode(ruta.read_bytes()).decode("ascii")
+
+
+def aplicar_estilos_ccu():
+    logo_ccu = obtener_logo_base64("ccu.png")
+    logo_cuspide = obtener_logo_base64("cuspide.png")
+
+    st.markdown("""
+    <style>
+        :root {
+            --ccu-primary: #5AB031;
+            --ccu-bg: #D9EAD7;
+            --ccu-card: #E8F1EB;
+            --ccu-dark: #264831;
+            --ccu-border: #BFD8BB;
+            --ccu-text: #1F2937;
+        }
+
+        .stApp {
+            background-color: var(--ccu-bg);
+            color: var(--ccu-text);
+        }
+
+        .block-container {
+            max-width: 1350px !important;
+            width: 100% !important;
+
+            padding-left: 20px !important;
+            padding-right: 20px !important;
+            padding-top: 0 !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+        }
+
+        [data-testid="stToolbar"] {
+            z-index: 1000;
+        }
+
+
+        h1, h2, h3 {
+            color: var(--ccu-dark) !important;
+        }
+
+        div[data-testid="stFileUploader"] {
+            background-color: #FFFFFF;
+            border: 1px solid var(--ccu-border);
+            border-radius: 16px;
+            padding: 15px;
+        }
+
+        div[data-testid="stFileUploader"] section {
+            background: #FFFFFF;
+            border-color: var(--ccu-border);
+        }
+
+        div[data-testid="stButton"] button[kind="primary"] {
+            background: var(--ccu-primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+        div[data-testid="stFileUploader"] button {
+    background-color: #FFFFFF !important;
+    color: #264831 !important;
+    border: 1px solid var(--ccu-border) !important;
+}
+
+div[data-testid="stFileUploader"] button:hover {
+    background-color: #F3F8F3 !important;
+    color: #264831 !important;
+    border-color: var(--ccu-primary) !important;
+}
+
+        div[data-testid="stButton"] button[kind="primary"]:hover {
+            background: #478D26;
+            color: white;
+        }
+
+        
+/* Encabezado CCU de borde a borde */
+.ccu-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+
+    /* Extender hasta los bordes de la pantalla */
+    width: 100vw;
+    max-width: none;
+
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+
+    /* Posición vertical */
+    margin-top: -45px;
+    margin-bottom: 25px;
+
+    /* Diseño CCU */
+    padding: 18px 1px;
+    background: var(--ccu-bg);
+border: none;
+border-radius: 0;
+box-shadow: none;
+    backgroud-color: #E8F1EB;
+}
+
+
+        .ccu-header h1 {
+            font-size: clamp(24px, 3vw, 38px);
+            font-weight: 800;
+            margin: 0;
+        }
+
+        .ccu-header p {
+            color: #64748B;
+            margin: 6px 0 0;
+
+        }
+
+        .ccu-logo {
+            max-height: 40px;
+            max-width: 75px;
+            object-fit: contain;
+        }
+
+        .ccu-logo-left {
+            max-height: 105px;
+        }
+        .ccu-logo-right {
+            padding-top: 20px;
+            padding-right: 5px;
+            max-height: 70px;
+        }
+
+        @media (max-width: 700px) {
+            .ccu-header {
+                flex-wrap: wrap;
+                justify-content: center;
+                text-align: center;
+            }
+
+            .ccu-header h1 {
+                font-size: 25px;
+            }
+
+            .ccu-logo {
+                max-height: 35px;
+            }
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    izquierda = (
+        f'<img class="ccu-logo ccu-logo-left" '
+        f'src="data:image/png;base64,{logo_ccu}" alt="CCU">'
+        if logo_ccu else ""
+    )
+
+    derecha = (
+        f'<img class="ccu-logo ccu-logo-right" '
+        f'src="data:image/png;base64,{logo_cuspide}" '
+        f'alt="Cúspide">'
+        if logo_cuspide else ""
+    )
+
+    st.markdown(f"""
+    <div class="ccu-header">
+        {izquierda}
+        {derecha}
+    </div>
+    """, unsafe_allow_html=True)
+
+
+aplicar_estilos_ccu()
+
+st.title("Sistema de Reabasto de Cajas")
+
+
 
 col1, col2 = st.columns(2)
 
