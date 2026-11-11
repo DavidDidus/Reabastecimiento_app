@@ -55,16 +55,38 @@ def aplicar_estilos_ccu():
             color: var(--ccu-text);
         }
 
-        .block-container {
-            max-width: 1350px !important;
-            width: 100% !important;
+        
+/* Contenedor principal de Streamlit */
+.stMainBlockContainer,
+[data-testid="stMainBlockContainer"],
+.block-container {
+    max-width: 1350px !important;
+    width: 100% !important;
 
-            padding-left: 20px !important;
-            padding-right: 20px !important;
-            padding-top: 0 !important;
-            margin-left: auto !important;
-            margin-right: auto !important;
-        }
+    padding-top: 0 !important;
+    padding-bottom: 1rem !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+
+    margin: 0 auto !important;
+}
+
+/* Eliminar el espacio superior de Streamlit */
+[data-testid="stMain"] {
+    padding-top: 0 !important;
+}
+
+[data-testid="stMain"] > div {
+    padding-top: 0 !important;
+}
+
+/* Quitar la altura reservada para la barra superior */
+header[data-testid="stHeader"] {
+    height: 0 !important;
+    min-height: 0 !important;
+    background: transparent !important;
+}
+
 
         [data-testid="stToolbar"] {
             z-index: 1000;
@@ -122,11 +144,11 @@ div[data-testid="stFileUploader"] button:hover {
     padding-top: 0 !important;
 }
 
+
 .ccu-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
 
     width: 100vw;
     max-width: none;
@@ -135,19 +157,32 @@ div[data-testid="stFileUploader"] button:hover {
     left: 50%;
     transform: translateX(-50%);
 
-    /* Evitar que los logos queden fuera de pantalla */
-    margin-top: 0 !important;
-    margin-bottom: 25px;
+    margin: 0 0 15px 0 !important;
+    padding: 0 25px !important;
 
-    padding: 15px 25px;
+    min-height: 100px;
 
     background: var(--ccu-bg);
     border: none;
     border-radius: 0;
     box-shadow: none;
+}
 
-    min-height: 100px;
-    z-index: 1;
+
+/* Evitar espacio superior del bloque que contiene los logos */
+[data-testid="stVerticalBlock"] > div:has(.ccu-header) {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Eliminar márgenes del HTML del encabezado */
+div[data-testid="stMarkdownContainer"]:has(.ccu-header) {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+div[data-testid="stMarkdownContainer"]:has(.ccu-header) p {
+    margin: 0 !important;
 }
 
 
