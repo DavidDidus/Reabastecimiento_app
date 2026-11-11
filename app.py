@@ -9,6 +9,16 @@ from reports.html_report import generar_html
 
 BASE = Path(__file__).resolve().parent
 
+st.markdown("""
+<style>
+[data-testid="stToolbar"] {
+    visibility: hidden;
+    height: 0%;
+    position: fixed;
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.set_page_config(
     page_title="Reabasto de Cajas",
     page_icon="📦",
