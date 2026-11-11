@@ -185,7 +185,11 @@ div[data-testid="stMarkdownContainer"]:has(.ccu-header) p {
     margin: 0 !important;
 }
 
-
+/* Eliminar separación automática entre componentes */
+[data-testid="stVerticalBlock"] {
+    gap: 0 !important;
+    row-gap: 0 !important;
+}
         .ccu-header h1 {
             font-size: clamp(24px, 3vw, 38px);
             font-weight: 800;
