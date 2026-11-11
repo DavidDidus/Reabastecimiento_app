@@ -147,21 +147,14 @@ div[data-testid="stFileUploader"] button:hover {
 
 .ccu-header {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-
     width: 100vw;
     max-width: none;
-
     position: relative;
     left: 50%;
     transform: translateX(-50%);
-
     margin: 0 0 15px 0 !important;
-    padding: 0 25px !important;
-
     min-height: 100px;
-
     background: var(--ccu-bg);
     border: none;
     border-radius: 0;
