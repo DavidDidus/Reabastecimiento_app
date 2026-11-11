@@ -9,6 +9,13 @@ from reports.html_report import generar_html
 
 BASE = Path(__file__).resolve().parent
 
+
+st.set_page_config(
+    page_title="Reabasto de Cajas",
+    page_icon="📦",
+    layout="wide"
+)
+
 st.markdown("""
 <style>
 [data-testid="stToolbar"] {
@@ -18,12 +25,6 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
-
-st.set_page_config(
-    page_title="Reabasto de Cajas",
-    page_icon="📦",
-    layout="wide"
-)
 
 def obtener_logo_base64(nombre):
     ruta = Path(__file__).resolve().parent / "static" / nombre
@@ -112,13 +113,14 @@ div[data-testid="stFileUploader"] button:hover {
 
         
 /* Encabezado CCU de borde a borde */
+
+/* Encabezado CCU de borde a borde */
 .ccu-header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 20px;
 
-    /* Extender hasta los bordes de la pantalla */
     width: 100vw;
     max-width: none;
 
@@ -126,17 +128,19 @@ div[data-testid="stFileUploader"] button:hover {
     left: 50%;
     transform: translateX(-50%);
 
-    /* Posición vertical */
-    margin-top: -45px;
+    /* Evitar que los logos queden fuera de pantalla */
+    margin-top: 0 !important;
     margin-bottom: 25px;
 
-    /* Diseño CCU */
-    padding: 18px 1px;
+    padding: 15px 25px;
+
     background: var(--ccu-bg);
-border: none;
-border-radius: 0;
-box-shadow: none;
-    backgroud-color: #E8F1EB;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+
+    min-height: 100px;
+    z-index: 1;
 }
 
 
