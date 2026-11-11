@@ -87,32 +87,18 @@ if "reporte" in st.session_state:
         f"{st.session_state['cantidad']} filas."
     )
 
-    if st.session_state["formato"] == "vida_util":
-        st.info("Modo: FEFO automático")
-    else:
+    if st.session_state["formato"] != "vida_util":
         st.warning("Advertencia: Cuadratura de stock no respeta FEFO, subir OPERACIONES DE VIDA UTIL.")
 
-    if st.session_state["faltantes"]:
-        st.warning(
-            "Hay cajas sin stock FEFO apto; "
-            "se muestran en la hoja como pendientes, "
-            "sin origen asignado."
-        )
 
-        st.dataframe(
-            st.session_state["faltantes"],
-            use_container_width=True
-        )
+    altura_reporte = max(
+    500,
+    260 + st.session_state["cantidad"] * 48
+    )
 
     st.components.v1.html(
         st.session_state["reporte"],
-        height=800,
-        scrolling=True
+        height=altura_reporte,
+        scrolling=False
     )
 
-    st.download_button(
-        "Descargar hoja HTML",
-        st.session_state["reporte"],
-        "hoja_reabasto.html",
-        mime="text/html"
-    )
