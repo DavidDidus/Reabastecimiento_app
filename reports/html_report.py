@@ -2,8 +2,6 @@
 from datetime import datetime
 from html import escape
 import json
-
-from fastapi import background
 import pandas as pd
 
 
