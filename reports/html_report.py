@@ -126,7 +126,6 @@ def generar_html(df):
                 background: #DC2626;
                 Color: white;
             }}
-
             @media print {{
                 .acciones {{
                     display: none !important;
