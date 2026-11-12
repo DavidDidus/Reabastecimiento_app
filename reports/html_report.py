@@ -126,6 +126,7 @@ def generar_html(df):
                 background: #DC2626;
                 Color: white;
             }}
+
             @media print {{
                 .acciones {{
                     display: none !important;
@@ -500,6 +501,7 @@ def generar_html(df):
                 actualizarNumeracion();
 
             }}
+
             // Calcular totales al cargar la hoja
             actualizarNumeracion();
 
