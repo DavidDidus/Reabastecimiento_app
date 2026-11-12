@@ -3,6 +3,7 @@ from datetime import datetime
 from html import escape
 import json
 
+from fastapi import background
 import pandas as pd
 
 
@@ -30,10 +31,22 @@ def generar_html(df):
                 <td class="centrado">
                     {cel('Secuencia Camión')}
                 </td>
-                <td class="cantidad">
+                <td class="cantidad" data-cantidad="{cel('Cant. Solicitada')}">
                     {cel('Cant. Solicitada')}
-                </td>
+                </td>            
                 <td class="check"></td>
+                <td class="acciones">
+                    <button
+                        type="button"
+                        class="eliminar-btn"
+                        onclick="eliminarFila(this)"
+                        title="Eliminar esta línea"
+                        aria-label="Eliminar esta línea"
+                    >
+                        ✕
+                    </button>
+                </td>
+
             </tr>
         """)
 
@@ -92,6 +105,33 @@ def generar_html(df):
                 color: #475569;
                 margin-bottom: 12px;
             }}
+            
+            .acciones {{
+                width: 55px;
+                text-align: center;
+            }}
+
+            .eliminar-btn {{
+                background: #FEE2E2;
+                color: #B91C1C;
+                border: 1px solid #FECACA;
+                border-radius: 5px;
+                padding: 4px 9px;
+                font-size: 13px;
+                font-weight: bold;
+                cursor: pointer;
+            }}
+
+            .eliminar-btn:hover {{
+                background: #DC2626;
+                Color: white;
+            }}
+
+            @media print {{
+                .acciones {{
+                    display: none !important;
+                }}
+            }}   
 
             table {{
                 width: 100%;
@@ -257,11 +297,20 @@ def generar_html(df):
                 </div>
             </div>
 
-            <div class="resumen">
-                <strong>Total SKUs a Mover:</strong> {total_skus}
-                &nbsp; | &nbsp;
-                <strong>Total Filas:</strong> {total_filas}
-            </div>
+            
+            <strong>Total SKUs a Mover:</strong>
+            <span id="total-skus">{total_skus}</span>
+
+            &nbsp; | &nbsp;
+
+            <strong>Total Filas:</strong>
+            <span id="total-filas">{total_filas}</span>
+
+            &nbsp; | &nbsp;
+
+            <strong>Total Cajas:</strong>
+            <span id="total-cajas">0</span>
+
 
             <table>
                 <thead>
@@ -274,6 +323,7 @@ def generar_html(df):
                         <th>Secuencia</th>
                         <th>Cajas</th>
                         <th>Check ✓</th>
+                        <th class="acciones">Acción</th>
                     </tr>
                 </thead>
 
@@ -297,7 +347,7 @@ def generar_html(df):
                 class="reset-btn"
                 onclick="restablecerOrden()"
             >
-                ↺ Restablecer Orden
+                ↺ Restaurar Hoja Original
             </button>
 
         </div>
@@ -369,6 +419,90 @@ def generar_html(df):
                     "Verifica la conexión a Internet.";
 
             }}
+
+
+            function actualizarNumeracion() {{
+
+                const filas = Array.from(
+                    tabla.querySelectorAll("tr")
+                );
+
+                const skus = new Set();
+                let totalCajas = 0;
+
+                filas.forEach((fila, indice) => {{
+
+                    // Actualizar numeración
+                    const numero = fila.querySelector(".numero");
+
+                    if (numero) {{
+                        numero.textContent = indice + 1;
+                    }}
+
+                    // Obtener SKU
+                    const sku = fila.querySelector(".sku");
+
+                    if (sku) {{
+                        skus.add(sku.textContent.trim());
+                    }}
+
+                    // Obtener cantidad
+                    const cantidad = fila.querySelector(".cantidad");
+
+                    if (cantidad) {{
+                        const valor = Number(
+                            cantidad.dataset.cantidad
+                        );
+
+                        if (Number.isFinite(valor)) {{
+                            totalCajas += valor;
+                        }}
+                    }}
+
+                }});
+
+                document.getElementById("total-skus").textContent =
+                    skus.size;
+
+                document.getElementById("total-filas").textContent =
+                    filas.length;
+
+                document.getElementById("total-cajas").textContent =
+                    totalCajas.toLocaleString("es-CL");
+
+            }}
+
+
+            function eliminarFila(boton) {{
+
+                const fila = boton.closest("tr");
+
+                if (!fila) {{
+                    return;
+                }}
+
+                const sku = fila.querySelector(".sku")
+                    ?.textContent.trim() || "";
+
+                 fila.remove();
+
+                actualizarNumeracion();
+
+            }}
+
+
+            function restablecerOrden() {{
+
+                // Restaurar también las filas eliminadas
+                filasOriginales.forEach(fila => {{
+                    tabla.appendChild(fila);
+                }});
+
+                actualizarNumeracion();
+
+            }}
+            // Calcular totales al cargar la hoja
+            actualizarNumeracion();
 
         </script>
 
